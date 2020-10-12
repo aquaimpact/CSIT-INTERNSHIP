@@ -51,6 +51,8 @@ class MainPage extends React.Component {
 		this.uploadFile2 = this.uploadFile2.bind(this);
 		this.handleClick = this.handleClick.bind(this);
 		this.handleClick2 = this.handleClick2.bind(this);
+		this.getlegends = this.getlegends.bind(this);
+		this.legends = {};
 		this.state = {
 			dropDownValue: "All Suspects",
 			dataList: ["All Suspects"],
@@ -75,6 +77,7 @@ class MainPage extends React.Component {
 
 			suspectCasesOriginal: [],
 			movementsOriginal: [],
+			legends:{},
 		}
 	}
 
@@ -342,8 +345,15 @@ class MainPage extends React.Component {
 		});
 	};
 
+	getlegends(getlegend){
+		this.legends = getlegend
+		// this.forceUpdate()
+	}
+
 	render() {
 		let placename
+
+		// console.log(this.legends)
 
 		let displaySetting2 = this.state.suspectCases.length > 0 && this.state.movements.length > 0 ? "visible" : "hidden"
 		let maindp1 = this.state.suspectCases.length > 0 && this.state.movements.length > 0 ? "relative" : "absolute"
@@ -362,9 +372,6 @@ class MainPage extends React.Component {
 		let graph1
 
 		const that = this;
-
-		let mapss = this.state.suspectCases.length > 0 && this.state.movements.length > 0 ? <MainMap profile={this.state.suspectCases} movement={this.state.movements} dataRetrieved={this.dataRetrievedMap}/> : null
-
 
 		//// ### UNCOMMENT FOR GANTT CHART ###
 		if (this.state.mapData.length !== 0) {
@@ -428,7 +435,7 @@ class MainPage extends React.Component {
 			graph1 = <Graph display={displaySetting2} options={options.options} series={testing} tool />
 		}
 
-		// console.log(this.state.datas)
+		// console.log(this.state.legends)
 
 		// Creating the COnfirmed Cases
 		let mappingsCC = this.state.datas.filter(data => data.caseNumber !== null).map(data => {
@@ -674,7 +681,10 @@ class MainPage extends React.Component {
 											</UncontrolledDropdown>
 										</Col>
 									</Row>
-									{mapss}
+									{
+										
+									}
+									<MainMap profile={this.state.suspectCases} movement={this.state.movements} dataRetrieved={this.dataRetrievedMap} getLegend={this.getlegends}/>
 								</Row>
 							</Container>
 						</section>

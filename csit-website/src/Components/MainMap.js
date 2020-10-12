@@ -5,7 +5,9 @@ mapboxgl.accessToken = 'pk.eyJ1IjoiYXF1YWltcGFjdCIsImEiOiJja2R0d2N3emswdzlwMnptc
 
 let map
 let counter = 0
-let source = []
+let popup
+let source
+
 
 class MainMap extends React.Component{
     
@@ -16,7 +18,7 @@ class MainMap extends React.Component{
             lng: 103.851959,
             lat: 1.290270,
             zoom: 10.5,
-
+            souceColors: {},
         };
 
         this.mapContainer = React.createRef();
@@ -24,35 +26,99 @@ class MainMap extends React.Component{
 
     componentDidMount() {
 
+        
         map = new mapboxgl.Map({
             container: this.mapContainer,
             style: 'mapbox://styles/mapbox/streets-v11',
             center: [this.state.lng, this.state.lat],
             zoom: this.state.zoom
         });
-        
 
-        // if(this.props.profile.length > 0 && this.props.movement.length > 0){
+        // Create a popup, but don't add it to the map yet.
+        var popup2 = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: false
+        });
 
-        //     let mappedResults = this.props.profile.map(x => {
-        //         return({
-        //             profile: x,
-        //             movements: this.props.movement.filter(xx => xx.suspectId == x.id)
-        //         })
-        //     })
+        popup = popup2
 
-        //     colorIDs = mappedResults.map(x => {
-        //         return(color)
-        //     })
-        // }
+        var size = 200
+
+        var pulsingDot = {
+            width: size,
+            height: size,
+            data: new Uint8Array(size * size * 4),
+             
+            // get rendering context for the map canvas when layer is added to the map
+            onAdd: function () {
+                var canvas = document.createElement('canvas');
+                canvas.width = this.width;
+                canvas.height = this.height;
+                this.context = canvas.getContext('2d');
+            },
+             
+            // called once before every frame where the icon will be used
+            render: function () {
+                var duration = 1000;
+                var t = (performance.now() % duration) / duration;
+                
+                var radius = (size / 2) * 0.3;
+                var outerRadius = (size / 2) * 0.7 * t + radius;
+                var context = this.context;
+                
+                // draw outer circle
+                context.clearRect(0, 0, this.width, this.height);
+                context.beginPath();
+                context.arc(
+                    this.width / 2,
+                    this.height / 2,
+                    outerRadius,
+                    0,
+                    Math.PI * 2
+                );
+            context.fillStyle = 'rgba(255, 200, 200,' + (1 - t) + ')';
+            context.fill();
+             
+            // draw inner circle
+            context.beginPath();
+            context.arc(
+            this.width / 2,
+            this.height / 2,
+            radius,
+            0,
+            Math.PI * 2
+            );
+            context.fillStyle = 'rgba(255, 100, 100, 1)';
+            context.strokeStyle = 'white';
+            context.lineWidth = 2 + 4 * (1 - t);
+            context.fill();
+            context.stroke();
+             
+            // update this image's data with data from the canvas
+            this.data = context.getImageData(
+            0,
+            0,
+            this.width,
+            this.height
+            ).data;
+             
+            // continuously repaint the map, resulting in the smooth animation of the dot
+            map.triggerRepaint();
+             
+            // return `true` to let the map know that the image was updated
+            return true;
+            }
+        };
+
+        map.addImage('pulsing-dot', pulsingDot, { pixelRatio: 2 });
     }
 
-    generateColor(){
+    static generateColor(){
         let n = (Math.random() * 0xfffff * 1000000).toString(16);
         return '#' + n.slice(0, 6);
     }
 
-    getDatetime(datetime, selection){
+    static getDatetime(datetime, selection){
 
         // 20/7/2020 8:00
         let date = datetime.split(" ")
@@ -90,26 +156,20 @@ class MainMap extends React.Component{
         return finalDatetime
     }
 
-    componentDidUpdate(){
+    static getDerivedStateFromProps(props, state){
 
-        let that = this
-        console.log(map.style.sourceCaches);
-        if(this.props.profile.length > 0 && this.props.movement.length > 0 ){
-            // if(IDs.length != 0){
-            //     IDs = []
-            // }
-
-            // console.log(this.props.profile)
-
-            // timeformat: [this.convertDate(movement.datetimeEntered),this.convertDate(movement.datetimeLeft)]
-            let mappedResults = this.props.profile.map(x => {
+        source = {}
+        // console.log(map.style.sourceCaches);
+        if(props.profile.length > 0 && props.movement.length > 0 ){
+          
+            let mappedResults = props.profile.map(x => {
                 return({
                     profile: x,
-                    movements: this.props.movement.filter(xx => xx.suspectId === x.id)
+                    movements: props.movement.filter(xx => xx.suspectId === x.id)
                 })
             })
 
-                        // Accepts the array and key
+            // Accepts the array and key
             const groupBy = (array, key) => {
                 // Return the end result
                 return array.reduce((result, currentValue) => {
@@ -123,7 +183,7 @@ class MainMap extends React.Component{
             };
             
             // Group by location address as key to the person array
-            const personGroupedByColor = groupBy(this.props.movement, 'locationShortaddress');
+            const personGroupedByColor = groupBy(props.movement, 'locationShortaddress');
             
             // console.log(personGroupedByColor)
 
@@ -141,7 +201,7 @@ class MainMap extends React.Component{
                             'marker-color': '#3bb2d0',
                             'marker-size': 'large',
                             'description':
-                                `<strong>${item.locationShortaddress}</strong><p>Time Entered: ${that.getDatetime(item.datetimeEntered, 't')}</p><p>Time Left: ${that.getDatetime(item.datetimeLeft, 't')}</p><p>Date: ${that.getDatetime(item.datetimeLeft, 'd')}</p>`
+                                `<strong>${item.locationShortaddress}</strong><p>Time Entered: ${MainMap.getDatetime(item.datetimeEntered, 't')}</p><p>Time Left: ${MainMap.getDatetime(item.datetimeLeft, 't')}</p><p>Date: ${MainMap.getDatetime(item.datetimeLeft, 'd')}</p>`
                             },
                         'geometry': {
                             'type': 'Point',
@@ -160,11 +220,11 @@ class MainMap extends React.Component{
                     let text = `<strong>${key}</strong>`
                     // console.log(placeID)
                     personGroupedByColor[key].forEach(xx => {
-                        let name = that.props.profile.filter(x => x.id === xx.suspectId).map(x => {
+                        let name = props.profile.filter(x => x.id === xx.suspectId).map(x => {
                             return(x.firstName + " " + x.lastName)
                         })
                         text += `<p>${name}</p>`
-                        text += `<p>Time Entered: ${that.getDatetime(xx.datetimeEntered, 't')}</p><p>Time Left: ${that.getDatetime(xx.datetimeLeft, 't')}</p><p>Date: ${that.getDatetime(xx.datetimeLeft, 'd')}</p>`
+                        text += `<p>Time Entered: ${MainMap.getDatetime(xx.datetimeEntered, 't')}</p><p>Time Left: ${MainMap.getDatetime(xx.datetimeLeft, 't')}</p><p>Date: ${MainMap.getDatetime(xx.datetimeLeft, 'd')}</p>`
                     })
 
                     // console.log(text)
@@ -188,6 +248,7 @@ class MainMap extends React.Component{
             });
 
             for(var key in map.style.sourceCaches){
+                console.log(key)
                 if(key != 'composite'){
                     map.removeLayer(key)
                     if(key == "placeIDs"){
@@ -199,7 +260,7 @@ class MainMap extends React.Component{
                             var enter = e.features[0].properties.enter;
                             var leave = e.features[0].properties.leave;
                             
-                            that.props.dataRetrieved(movementID)
+                            props.dataRetrieved(movementID)
             
 
                         });
@@ -234,102 +295,70 @@ class MainMap extends React.Component{
                 // console.log(map.getStyle().layers)
             }
             
+            mappedResults.forEach(e => {
 
-            map.loadImage(
-                'https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png',
-                // Add an image to use as a custom marker
-                function(error, image) {
-                    if (error) throw error;
-                    
-                    map.addImage('Imgids', image);
-                    
-                    mappedResults.forEach(e => {
+                let lol = Math.floor(Math.random() * 101).toString()
 
-                        let lol = Math.floor(Math.random() * 101).toString()
+                let UMovements = e.movements.map(x => {
+                    return([x.locationLong, x.locationLat])
+                })
 
-                        let UMovements = e.movements.map(x => {
-                            return([x.locationLong, x.locationLat])
-                        })
-
-                        // console.log(UMovements)
-
-                        map.addSource(lol, {
-                            'type': 'geojson',
-                            'data': {
-                                'type': 'Feature',
-                                'properties': {},
-                                'geometry': {
-                                    'type': 'LineString',
-                                    'coordinates': UMovements
-                                }
-                            }
-                        });
-    
-                        let color = that.generateColor()
-                        source.push(lol)
-    
-                        map.addLayer({
-                            'id': lol,
-                            'type': 'line',
-                            'source': lol,
-                            'layout': {
-                                'line-join': 'round',
-                                'line-cap': 'round'
-                            },
-                            'paint': {
-                                'line-color': color,
-                                'line-width': 5
-                            }
-                        });
-                    })
-
-                    map.addSource('placeIDs', {
-                        'type': 'geojson',
-                        'data': {
-                            'type': 'FeatureCollection',
-                            'features': UPoints
+                map.addSource(lol, {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'Feature',
+                        'properties': {},
+                        'geometry': {
+                            'type': 'LineString',
+                            'coordinates': UMovements
                         }
-                    });
-                    
-                    // Add a layer showing the places.
-                    map.addLayer({
-                        'id': 'placeIDs',
-                        'type': 'symbol',
-                        'source': 'placeIDs',
-                        'layout': {
-                            // "line-cap": "round",
-                            // "line-join": "round"
-                            'icon-image': 'Imgids',
-                            'icon-allow-overlap': true
-                        }
-                    });
-    
+                    }
                 });
 
-            // Create a popup, but don't add it to the map yet.
-            var popup = new mapboxgl.Popup({
-                closeButton: false,
-                closeOnClick: false
+                let color = MainMap.generateColor()
+                source = {...source, [color]: e.profile.firstName + " " + e.profile.lastName}
+                
+                map.addLayer({
+                    'id': lol,
+                    'type': 'line',
+                    'source': lol,
+                    'layout': {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    'paint': {
+                        'line-color': color,
+                        'line-width': 5
+                    }
+                });
+            })
+
+            map.addSource('placeIDs', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'FeatureCollection',
+                    'features': UPoints
+                }
+            });
+
+            // Add a layer showing the places.
+            map.addLayer({
+                'id': 'placeIDs',
+                'type': 'symbol',
+                'source': 'placeIDs',
+                'layout': {
+                    // "line-cap": "round",
+                    // "line-join": "round"
+                    'icon-image': 'pulsing-dot',
+                    'icon-allow-overlap': true
+                }
             });
 
             map.on('click', 'placeIDs', function(e){
 
-                var placeID = e.features[0].properties.placeID;           
-                var description = e.features[0].properties.description;
                 var movementID = e.features[0].properties.movementID;
-                var enter = e.features[0].properties.enter;
-                var leave = e.features[0].properties.leave;
-
-                // count += 1
-                // let m = that.props.movement.filter(x => x.id == movementID)
-                // let p = that.props.profile.filter(x => x.id == m[0].suspectId)
                 
-                that.props.dataRetrieved(movementID)
-
-                // if(Array.isArray(movementID)){
-
-                // }
-                // console.log(movementID)
+                props.dataRetrieved(movementID)
             });
 
             map.on('mouseenter', 'placeIDs', function(e) {
@@ -358,15 +387,32 @@ class MainMap extends React.Component{
             });
 
             counter += 1
-        }   
+        } 
+        
+        return true;
     }
 
     render(){
-
+        
+        let legend = []
+        for(var key in source){
+            legend.push(
+                <div style={{marginRight:"20px"}}>
+                    <span style={{height:"18px", width: "18px", backgroundColor: key, borderRadius: "50%", display: "inline-block"}}></span>
+                    <h5 style={{display: "inline-block", marginLeft:"10px"}}>{source[key]}</h5>
+                </div>
+            )
+        }
         return(
-            <div style={{position:"relative",height:"700px", width:"100%"}}>
-                <div ref={el => this.mapContainer = el} style={{position:"reletive", width:"inherit", height:"inherit"}}/>
-            </div>
+            <>
+                <div style={{display:"flex", justifyContent:"space-between"}}>
+                   {legend}
+                </div>
+                <div style={{position:"relative",height:"700px", width:"100%"}}>
+                    <div ref={el => this.mapContainer = el} style={{position:"reletive", width:"inherit", height:"inherit"}}/>
+                </div>
+            </>
+            
         )
     }
 
