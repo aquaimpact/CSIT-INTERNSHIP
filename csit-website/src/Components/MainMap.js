@@ -42,7 +42,7 @@ class MainMap extends React.Component{
 
         popup = popup2
 
-        var size = 200
+        var size = 100
 
         var pulsingDot = {
             width: size,
@@ -398,7 +398,8 @@ class MainMap extends React.Component{
         for(var key in source){
             legend.push(
                 <div style={{marginRight:"20px"}}>
-                    <span style={{height:"18px", width: "18px", backgroundColor: key, borderRadius: "50%", display: "inline-block"}}></span>
+                    {/* <hr style={{borderTop: "10px solid " + {key}, width:"50px"}}/>  */}
+                    <span style={{height:"16px", width: "50px", backgroundColor: key, borderRadius: "20%", display: "inline-block"}}></span>
                     <h5 style={{display: "inline-block", marginLeft:"10px"}}>{source[key]}</h5>
                 </div>
             )

@@ -681,9 +681,6 @@ class MainPage extends React.Component {
 											</UncontrolledDropdown>
 										</Col>
 									</Row>
-									{
-										
-									}
 									<MainMap profile={this.state.suspectCases} movement={this.state.movements} dataRetrieved={this.dataRetrievedMap} getLegend={this.getlegends}/>
 								</Row>
 							</Container>
